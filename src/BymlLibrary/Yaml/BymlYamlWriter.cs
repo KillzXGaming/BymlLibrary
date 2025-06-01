@@ -90,6 +90,32 @@ public static class BymlYamlWriter
         emitter.WriteString(Encoding.UTF8.GetString(stringTable[index][..^1]));
     }
 
+    public static void WritePathPoint(ref Utf8YamlEmitter emitter, int index, in ImmutableBymlPathArray.ImmutableBymlPath path)
+    {
+        var point = path[index];
+
+        emitter.BeginMapping(MappingStyle.Flow);
+
+        emitter.WriteString("X");
+        emitter.WriteDouble(point.Position.X);
+        emitter.WriteString("Y");
+        emitter.WriteDouble(point.Position.Y);
+        emitter.WriteString("Z");
+        emitter.WriteDouble(point.Position.Z);
+
+        emitter.WriteString("NX");
+        emitter.WriteDouble(point.Normal.X);
+        emitter.WriteString("NY");
+        emitter.WriteDouble(point.Normal.Y);
+        emitter.WriteString("NZ");
+        emitter.WriteDouble(point.Normal.Z);
+
+        emitter.WriteString("Value");
+        emitter.WriteUInt32(point.Value);
+
+        emitter.EndMapping();
+    }
+
     public static void Write(ref Utf8YamlEmitter emitter, in Byml byml)
     {
         switch (byml.Value) {

@@ -102,7 +102,7 @@ public sealed class Byml
     public static Byml FromImmutable(in ImmutableByml byml, in ImmutableByml root)
     {
         if (root.SupportsPaths && byml.Type == BymlNodeType.MK8PathIndex)
-            return new(root.PathArray.Paths[byml.GetMK8PathIndex()]);
+            return new(root.PathArray[byml.GetMK8PathIndex()].ToMutable(root));
 
         Byml result = byml.Type switch {
             BymlNodeType.HashMap32
