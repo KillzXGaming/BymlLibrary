@@ -21,7 +21,7 @@ public readonly ref struct ImmutableByml
     public readonly ImmutableBymlStringTable KeyTable;
     public readonly ImmutableBymlStringTable StringTable;
     public readonly bool SupportsPaths;
-    public readonly BymlPathArray PathArray;
+    public readonly ImmutableBymlPathArray PathArray;
 
     /// <summary>
     /// A span of the byml data
@@ -73,14 +73,16 @@ public readonly ref struct ImmutableByml
             if (SupportsPaths)
             {
                 reader.Seek(12);
-                uint pathOffset = reader.Read<uint>();
+                int pathOffset = reader.Read<int>();
                 Header.RootNodeOffset = reader.Read<int>();
 
-                reader.Seek((int)pathOffset);
+                reader.Seek(pathOffset);
                 ref BymlContainer pathTableHeader
                     = ref CheckContainerHeader(ref reader, BymlNodeType.MK8PathArray);
-
-                PathArray = new BymlPathArray(reader, pathTableHeader);
+                PathArray = new ImmutableBymlPathArray(_data, pathOffset, pathTableHeader.Count);
+                if (reader.Endianness.IsNotSystemEndianness()) {
+                    ImmutableBymlStringTable.Reverse(ref reader, pathOffset, pathTableHeader.Count);
+                }
             }
 
             reader.Seek(pos);
@@ -206,7 +208,8 @@ public readonly ref struct ImmutableByml
     }
 
     // Todo Immutable BymlPathArray then use MethodImplOptions.AggressiveInlining
-    public BymlPathArray GetMK8Path()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ImmutableBymlPathArray GetMK8Path()
     {
         return this.PathArray;
     }

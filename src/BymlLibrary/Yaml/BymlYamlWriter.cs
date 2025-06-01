@@ -22,7 +22,7 @@ public static class BymlYamlWriter
         if (root.SupportsPaths && byml.Type == BymlNodeType.MK8PathIndex)
         {
             var pathIndex = byml.GetMK8PathIndex();
-            root.GetMK8Path().EmitYaml(ref emitter, root, pathIndex);
+            root.GetMK8Path()[pathIndex].EmitYaml(ref emitter, root);
             return;
         }
 

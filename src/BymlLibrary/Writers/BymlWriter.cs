@@ -220,7 +220,7 @@ internal class BymlWriter
         foreach (var point in paths.Values.SelectMany(x => x.Item2.Points)) {
             Writer.Write(point.Position);
             Writer.Write(point.Normal);
-            Writer.Write(point.Unk);
+            Writer.Write(point.Value);
         }
 
         Writer.Align(4);

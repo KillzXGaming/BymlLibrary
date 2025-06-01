@@ -30,38 +30,6 @@ namespace BymlLibrary.Nodes.Containers
             }
         }
 
-        // Emits per path
-        internal unsafe void EmitYaml(ref Utf8YamlEmitter emitter, in ImmutableByml root, int pathIndex)
-        {
-            emitter.BeginSequence(SequenceStyle.Block);
-
-            foreach (var point in Paths[pathIndex].Points)
-            {
-                emitter.BeginMapping(MappingStyle.Flow);
-
-                emitter.WriteString("X");
-                emitter.WriteDouble(point.Position.X);
-                emitter.WriteString("Y");
-                emitter.WriteDouble(point.Position.Y);
-                emitter.WriteString("Z");
-                emitter.WriteDouble(point.Position.Z);
-
-                emitter.WriteString("NX");
-                emitter.WriteDouble(point.Normal.X);
-                emitter.WriteString("NY");
-                emitter.WriteDouble(point.Normal.Y);
-                emitter.WriteString("NZ");
-                emitter.WriteDouble(point.Normal.Z);
-
-                emitter.WriteString("Value");
-                emitter.WriteUInt32(point.Unk);
-
-                emitter.EndMapping();
-            }
-
-            emitter.EndSequence();
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetHashCode(BymlPathPoint[] points)
         {
@@ -94,7 +62,7 @@ namespace BymlLibrary.Nodes.Containers
 
         public Vector3 Position;
         public Vector3 Normal;
-        public uint Unk;
+        public uint Value;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public readonly int GetValueHashCode()
@@ -102,7 +70,7 @@ namespace BymlLibrary.Nodes.Containers
             HashCode hashCode = new();
             hashCode.Add(Position.GetHashCode());
             hashCode.Add(Normal.GetHashCode());
-            hashCode.Add(Unk.GetHashCode());
+            hashCode.Add(Value.GetHashCode());
             return hashCode.ToHashCode();
         }
     }
