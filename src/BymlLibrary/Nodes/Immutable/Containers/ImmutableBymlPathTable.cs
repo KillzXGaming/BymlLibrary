@@ -46,7 +46,6 @@ namespace BymlLibrary.Nodes.Immutable.Containers
                 int start = _offset + _offsets[index];
                 int end = _offset + _offsets[++index];
                 int count = (end - start) / Point.SIZE;
-                // bytes for the path data
                 return new ImmutableBymlPath(_data[start..end], count);
             }
         }
@@ -83,22 +82,18 @@ namespace BymlLibrary.Nodes.Immutable.Containers
 
         public BymlPath ToMutable(in ImmutableByml root)
         {
-            BymlPath path = new BymlPath()
-            {
+            BymlPath path = new BymlPath() {
                 Points = new BymlPathPoint[_count],
             };
-
             for (int i = 0; i < _count; i++)
             {
                 var point = this[i];
-                path.Points[i] = new BymlPathPoint()
-                {
+                path.Points[i] = new BymlPathPoint() {
                     Position = point.Position,
                     Normal = point.Normal,
                     Value = point.Value,
                 };
             }
-
             return path;
         }
 

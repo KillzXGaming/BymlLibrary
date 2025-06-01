@@ -90,7 +90,7 @@ public static class BymlYamlWriter
         emitter.WriteString(Encoding.UTF8.GetString(stringTable[index][..^1]));
     }
 
-    public static void WritePathPoint(ref Utf8YamlEmitter emitter, int index, in ImmutableBymlPathArray.ImmutableBymlPath path)
+    public static void WritePathPoint(ref Utf8YamlEmitter emitter, int index, in ImmutableBymlPath path)
     {
         var point = path[index];
 
