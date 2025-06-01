@@ -76,7 +76,7 @@ namespace BymlLibrary.Nodes.Immutable.Containers
                 int start = index * Point.SIZE;
                 int end = start + Point.SIZE;
                 // bytes for the path data
-                return _data[start..end].Read<Point>();
+                return _data[start..end].Read<Point, Point.Reverser>(0);
             }
         }
 

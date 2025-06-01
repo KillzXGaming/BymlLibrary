@@ -20,8 +20,8 @@ public readonly ref struct ImmutableByml
     public readonly BymlHeader Header;
     public readonly ImmutableBymlStringTable KeyTable;
     public readonly ImmutableBymlStringTable StringTable;
-    public readonly bool SupportsPaths;
     public readonly ImmutableBymlPathTable PathArray;
+    public readonly bool SupportsPaths;
 
     /// <summary>
     /// A span of the byml data
