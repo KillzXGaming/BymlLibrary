@@ -19,6 +19,13 @@ public static class BymlYamlWriter
         formattedHexBuffer[0] = (byte)'0';
         formattedHexBuffer[1] = (byte)'x';
 
+        if (root.SupportsPaths && byml.Type == BymlNodeType.MK8PathIndex)
+        {
+            var pathIndex = byml.GetMK8PathIndex();
+            root.GetMK8Path().EmitYaml(ref emitter, root, pathIndex);
+            return;
+        }
+
         switch (byml.Type) {
             case BymlNodeType.HashMap32:
                 byml.GetHashMap32().EmitYaml(ref emitter, root);

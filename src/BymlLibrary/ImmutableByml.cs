@@ -9,6 +9,7 @@ using System.Buffers;
 using System.Runtime.CompilerServices;
 using System.Text;
 using LiteYaml.Emitter;
+using BymlLibrary.Nodes.Containers;
 
 namespace BymlLibrary;
 
@@ -19,6 +20,8 @@ public readonly ref struct ImmutableByml
     public readonly BymlHeader Header;
     public readonly ImmutableBymlStringTable KeyTable;
     public readonly ImmutableBymlStringTable StringTable;
+    public readonly bool SupportsPaths;
+    public readonly BymlPathArray PathArray;
 
     /// <summary>
     /// A span of the byml data
@@ -47,9 +50,40 @@ public readonly ref struct ImmutableByml
                 $"Invalid BYML magic: '{Encoding.UTF8.GetString(BitConverter.GetBytes(Header.Magic))}'");
         }
 
-        if (Header.Version < 2 || Header.Version > 7) {
+        if (Header.Version > 7) {
             throw new InvalidDataException(
                 $"Unsupported BYML version: '{Header.Version}'");
+        }
+
+        // Version 1 can contain path node types
+        if (Header.Version == 1)
+        {
+            var pos = reader.Position;
+
+            reader.Seek(12);
+
+            //
+            var thirdNodeType = PeekNodeType(ref reader);
+            reader.Seek(16);
+            var fourthNodeType = PeekNodeType(ref reader);
+
+            SupportsPaths = (thirdNodeType == BymlNodeType.Null || thirdNodeType == BymlNodeType.MK8PathArray)
+                  && (fourthNodeType == BymlNodeType.Array || fourthNodeType == BymlNodeType.Map);
+
+            if (SupportsPaths)
+            {
+                reader.Seek(12);
+                uint pathOffset = reader.Read<uint>();
+                Header.RootNodeOffset = reader.Read<int>();
+
+                reader.Seek((int)pathOffset);
+                ref BymlContainer pathTableHeader
+                    = ref CheckContainerHeader(ref reader, BymlNodeType.MK8PathArray);
+
+                PathArray = new BymlPathArray(reader, pathTableHeader);
+            }
+
+            reader.Seek(pos);
         }
 
         if (Header.KeyTableOffset > 0) {
@@ -89,6 +123,24 @@ public readonly ref struct ImmutableByml
             = ref _data[(_value = new(Header.RootNodeOffset)).Offset..].Read<BymlContainer>();
         Type = rootNodeHeader.Type;
         Endianness = reader.Endianness;
+    }
+
+    private static BymlNodeType PeekNodeType(ref RevrsReader reader)
+    {
+        uint offset = reader.Read<uint>();
+
+        var pos = reader.Position;
+        if (offset > 0 && offset < reader.Length)
+        {
+            // Seek to the offset and try to read a valid type.
+            reader.Position = (int)offset;
+            BymlNodeType nodeType = (BymlNodeType)reader.Read<byte>();
+            if (Enum.IsDefined(typeof(BymlNodeType), nodeType))
+                return nodeType;
+        }
+        reader.Seek(pos);
+
+        return BymlNodeType.Null;
     }
 
     internal ImmutableByml(Span<byte> data, int value, BymlNodeType type)
@@ -153,6 +205,12 @@ public readonly ref struct ImmutableByml
         return new(_data, _value.Offset, header.Count);
     }
 
+    // Todo Immutable BymlPathArray then use MethodImplOptions.AggressiveInlining
+    public BymlPathArray GetMK8Path()
+    {
+        return this.PathArray;
+    }
+
     //
     // Special Value Types
 
@@ -195,6 +253,13 @@ public readonly ref struct ImmutableByml
     public readonly int GetInt()
     {
         Type.Assert(BymlNodeType.Int);
+        return _value.Int;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly int GetMK8PathIndex()
+    {
+        Type.Assert(BymlNodeType.MK8PathIndex);
         return _value.Int;
     }
 

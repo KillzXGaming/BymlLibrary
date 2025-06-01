@@ -40,6 +40,10 @@ public enum BymlNodeType : byte
     UInt64 = 0xD5,
     Double = 0xD6,
     Null = 0xFF,
+
+    // MK8 only
+    MK8PathIndex = 0xA1,
+    MK8PathArray = 0xC3,
 }
 
 public sealed class Byml
@@ -97,6 +101,9 @@ public sealed class Byml
 
     public static Byml FromImmutable(in ImmutableByml byml, in ImmutableByml root)
     {
+        if (root.SupportsPaths && byml.Type == BymlNodeType.MK8PathIndex)
+            return new(root.PathArray.Paths[byml.GetMK8PathIndex()]);
+
         Byml result = byml.Type switch {
             BymlNodeType.HashMap32
                 => new(byml.GetHashMap32().ToMutable(root)),
@@ -137,10 +144,10 @@ public sealed class Byml
         return result;
     }
 
-    public byte[] ToBinary(Endianness endianness, ushort version = 2)
+    public byte[] ToBinary(Endianness endianness, ushort version = 2, bool supportPaths = false)
     {
         MemoryStream ms = new();
-        WriteBinary(ms, endianness, version);
+        WriteBinary(ms, endianness, version, supportPaths);
         return ms.ToArray();
     }
 
@@ -151,16 +158,16 @@ public sealed class Byml
     /// <param name="stream">The stream to write into (must be seekable)</param>
     /// <param name="endianness">The endianness to use when writing the file</param>
     /// <param name="version">The BYML version to use when writing the file</param>
-    public void WriteBinary(in Stream stream, Endianness endianness, ushort version = 2)
+    public void WriteBinary(in Stream stream, Endianness endianness, ushort version = 2, bool supportPaths = false)
     {
-        BymlWriter writer = new(this, stream, endianness, version);
+        BymlWriter writer = new(this, stream, endianness, version, supportPaths);
         writer.Write();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void WriteBinary(string filename, Endianness endianness, ushort version = 2)
+    public void WriteBinary(string filename, Endianness endianness, ushort version = 2, bool supportPaths = false)
     {
-        File.WriteAllBytes(filename, ToBinary(endianness, version));
+        File.WriteAllBytes(filename, ToBinary(endianness, version, supportPaths));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -302,6 +309,13 @@ public sealed class Byml
     {
         Type = BymlNodeType.Double;
         Value = value;
+    }
+
+    public static implicit operator Byml(BymlPath data) => new(data);
+    public Byml(BymlPath data)
+    {
+        Type = BymlNodeType.MK8PathIndex;
+        Value = data;
     }
 
     public Byml()
