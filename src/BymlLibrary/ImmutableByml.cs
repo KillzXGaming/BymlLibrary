@@ -38,6 +38,7 @@ public readonly ref struct ImmutableByml
     public ImmutableByml(ref RevrsReader reader, bool useShiftJIS = false)
     {
         _data = reader.Data;
+
         UseShiftJIS = useShiftJIS;
 
         reader.Endianness = Endianness.Little;
@@ -77,7 +78,10 @@ public readonly ref struct ImmutableByml
             {
                 reader.Seek(12);
                 int pathOffset = reader.Read<int>();
+
+                reader.Endianness = Endianness.Little;
                 Header.RootNodeOffset = reader.Read<int>();
+                reader.Endianness = Endianness.Big;
 
                 if (pathOffset != 0)
                 {
@@ -124,7 +128,7 @@ public readonly ref struct ImmutableByml
                 Header.RootNodeOffset
             ];
 
-            ReverseContainer(ref reader, Header.RootNodeOffset, reversedOffsets);
+            ReverseContainer(ref reader, Header.RootNodeOffset, reversedOffsets, SupportsPaths);
         }
         if (Header.RootNodeOffset != 0)
         {
@@ -340,7 +344,8 @@ public readonly ref struct ImmutableByml
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void ReverseNode(ref RevrsReader reader, int value, BymlNodeType type, in HashSet<int> reversedOffsets)
+    internal static void ReverseNode(ref RevrsReader reader, int value,
+        BymlNodeType type, in HashSet<int> reversedOffsets, bool supportsPaths)
     {
         if (type.IsValueType()) {
             return;
@@ -353,31 +358,32 @@ public readonly ref struct ImmutableByml
         reversedOffsets.Add(value);
 
         if (type.IsContainerType()) {
-            ReverseContainer(ref reader, value, reversedOffsets);
+            ReverseContainer(ref reader, value, reversedOffsets, supportsPaths);
         }
         else if (type.IsSpecialValueType()) {
-            ReverseSpecialValue(ref reader, value, type);
+            ReverseSpecialValue(ref reader, value, type, supportsPaths);
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void ReverseContainer(ref RevrsReader reader, int offset, in HashSet<int> reversedOffsets)
+    private static void ReverseContainer(ref RevrsReader reader, int offset,
+        in HashSet<int> reversedOffsets, bool supportsPaths)
     {
         BymlContainer header = reader
             .Read<BymlContainer, BymlContainer.Reverser>(offset);
 
         switch (header.Type) {
             case BymlNodeType.HashMap32:
-                ImmutableBymlHashMap32.Reverse(ref reader, offset, header.Count, reversedOffsets);
+                ImmutableBymlHashMap32.Reverse(ref reader, offset, header.Count, reversedOffsets, supportsPaths);
                 break;
             case BymlNodeType.HashMap64:
-                ImmutableBymlHashMap64.Reverse(ref reader, offset, header.Count, reversedOffsets);
+                ImmutableBymlHashMap64.Reverse(ref reader, offset, header.Count, reversedOffsets, supportsPaths);
                 break;
             case BymlNodeType.Array:
-                ImmutableBymlArray.Reverse(ref reader, offset, header.Count, reversedOffsets);
+                ImmutableBymlArray.Reverse(ref reader, offset, header.Count, reversedOffsets, supportsPaths);
                 break;
             case BymlNodeType.Map:
-                ImmutableBymlMap.Reverse(ref reader, offset, header.Count, reversedOffsets);
+                ImmutableBymlMap.Reverse(ref reader, offset, header.Count, reversedOffsets, supportsPaths);
                 break;
             default:
                 throw new NotImplementedException($"""
@@ -387,8 +393,13 @@ public readonly ref struct ImmutableByml
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void ReverseSpecialValue(ref RevrsReader reader, int offset, BymlNodeType type)
+    private static void ReverseSpecialValue(ref RevrsReader reader, int offset, BymlNodeType type, bool supportsPaths)
     {
+        if (supportsPaths && type == BymlNodeType.Binary) // Path type, ignore
+        {
+            return;
+        }
+
         switch (type) {
             case BymlNodeType.String or BymlNodeType.Binary:
                 reader.Reverse<int>(offset);

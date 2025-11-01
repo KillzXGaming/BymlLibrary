@@ -80,7 +80,7 @@ public readonly ref struct ImmutableBymlArray(Span<byte> data, int offset, int c
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Reverse(ref RevrsReader reader, int offset, int count, in HashSet<int> reversedOffsets)
+    public static void Reverse(ref RevrsReader reader, int offset, int count, in HashSet<int> reversedOffsets, bool supportsPaths)
     {
         reader.Seek(offset + BymlContainer.SIZE);
         Span<BymlNodeType> types = reader.ReadSpan<BymlNodeType>(count);
@@ -88,7 +88,7 @@ public readonly ref struct ImmutableBymlArray(Span<byte> data, int offset, int c
         Span<int> values = reader.ReadSpan<int>(count);
 
         for (int i = 0; i < count; i++) {
-            ImmutableByml.ReverseNode(ref reader, values[i], types[i], reversedOffsets);
+            ImmutableByml.ReverseNode(ref reader, values[i], types[i], reversedOffsets, supportsPaths);
         }
     }
 
