@@ -1,4 +1,5 @@
-﻿using BymlLibrary.Nodes.Containers;
+﻿using BymlLibrary.Extensions;
+using BymlLibrary.Nodes.Containers;
 using BymlLibrary.Nodes.Immutable.Containers;
 using LiteYaml.Emitter;
 using System.Buffers;
@@ -34,7 +35,10 @@ public static class BymlYamlWriter
                 byml.GetHashMap64().EmitYaml(ref emitter, root);
                 break;
             case BymlNodeType.String:
-                WriteRawString(ref emitter, byml.GetStringIndex(), root.StringTable);
+                if (root.UseShiftJIS)
+                    WriteRawStringJIS(ref emitter, byml.GetStringIndex(), root.StringTable);
+                else
+                    WriteRawString(ref emitter, byml.GetStringIndex(), root.StringTable);
                 break;
             case BymlNodeType.Binary:
                 Span<byte> data = byml.GetBinary();
@@ -88,6 +92,10 @@ public static class BymlYamlWriter
     public static void WriteRawString(ref Utf8YamlEmitter emitter, int index, in ImmutableBymlStringTable stringTable)
     {
         emitter.WriteString(Encoding.UTF8.GetString(stringTable[index][..^1]));
+    }
+    public static void WriteRawStringJIS(ref Utf8YamlEmitter emitter, int index, in ImmutableBymlStringTable stringTable)
+    {
+        emitter.WriteString(ShiftJISExtensions.ToShiftJISManaged(stringTable[index][..^1]));
     }
 
     public static void WritePathPoint(ref Utf8YamlEmitter emitter, int index, in ImmutableBymlPath path)

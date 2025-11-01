@@ -113,7 +113,7 @@ public sealed class Byml
             BymlNodeType.HashMap64
                 => new(byml.GetHashMap64().ToMutable(root)),
             BymlNodeType.String
-                => byml.UseShiftJIS ?
+                => root.UseShiftJIS ?
                 new(root.StringTable[byml.GetStringIndex()].ToShiftJISManaged()) :
                 new(root.StringTable[byml.GetStringIndex()].ToManaged()),
             BymlNodeType.Binary
