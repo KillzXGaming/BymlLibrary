@@ -96,6 +96,9 @@ public sealed class Byml
 
     public static Byml FromImmutable(in ImmutableByml root)
     {
+        if (root.Header.RootNodeOffset == 0)
+            return new Byml();
+
         return FromImmutable(root, root);
     }
 
@@ -110,7 +113,9 @@ public sealed class Byml
             BymlNodeType.HashMap64
                 => new(byml.GetHashMap64().ToMutable(root)),
             BymlNodeType.String
-                => new(root.StringTable[byml.GetStringIndex()].ToManaged()),
+                => byml.UseShiftJIS ?
+                new(root.StringTable[byml.GetStringIndex()].ToShiftJISManaged()) :
+                new(root.StringTable[byml.GetStringIndex()].ToManaged()),
             BymlNodeType.Binary
                 => new(byml.GetBinary().ToArray()),
             BymlNodeType.BinaryAligned
@@ -144,10 +149,10 @@ public sealed class Byml
         return result;
     }
 
-    public byte[] ToBinary(Endianness endianness, ushort version = 2, bool supportPaths = false)
+    public byte[] ToBinary(Endianness endianness, ushort version = 2, bool supportPaths = false, bool useShiftJIS = false)
     {
         MemoryStream ms = new();
-        WriteBinary(ms, endianness, version, supportPaths);
+        WriteBinary(ms, endianness, version, supportPaths, useShiftJIS);
         return ms.ToArray();
     }
 
@@ -158,16 +163,16 @@ public sealed class Byml
     /// <param name="stream">The stream to write into (must be seekable)</param>
     /// <param name="endianness">The endianness to use when writing the file</param>
     /// <param name="version">The BYML version to use when writing the file</param>
-    public void WriteBinary(in Stream stream, Endianness endianness, ushort version = 2, bool supportPaths = false)
+    public void WriteBinary(in Stream stream, Endianness endianness, ushort version = 2, bool supportPaths = false, bool useShiftJIS = false)
     {
-        BymlWriter writer = new(this, stream, endianness, version, supportPaths);
+        BymlWriter writer = new(this, stream, endianness, version, supportPaths, useShiftJIS);
         writer.Write();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void WriteBinary(string filename, Endianness endianness, ushort version = 2, bool supportPaths = false)
+    public void WriteBinary(string filename, Endianness endianness, ushort version = 2, bool supportPaths = false, bool useShiftJIS = false)
     {
-        File.WriteAllBytes(filename, ToBinary(endianness, version, supportPaths));
+        File.WriteAllBytes(filename, ToBinary(endianness, version, supportPaths, useShiftJIS));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -322,6 +327,10 @@ public sealed class Byml
     {
         Type = BymlNodeType.Null;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public BymlPath GetPath()
+     => Get<BymlPath>();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public BymlHashMap32 GetHashMap32()

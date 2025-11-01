@@ -19,14 +19,19 @@ internal class BymlWriter
     private Dictionary<string, int> _strings = [];
     private Dictionary<int, (int, BymlPath)> _paths = [];
 
+    private Encoding _encoding;
+
     public RevrsWriter Writer { get; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public BymlWriter(Byml byml, in Stream stream, Endianness endianness, ushort version, bool supportPaths)
+    public BymlWriter(Byml byml, in Stream stream, Endianness endianness,
+        ushort version, bool supportPaths, bool useShiftJIS = false)
     {
         Writer = new(stream, endianness);
         _version = version;
         _supportPaths = supportPaths;
+        _encoding = useShiftJIS ? Encoding.UTF8 : Encoding.UTF8;
+
         Collect(_root = byml);
     }
 
@@ -246,7 +251,7 @@ internal class BymlWriter
         int previousStringOffset = ((strings.Count + 1) * sizeof(uint)) + BymlContainer.SIZE;
         Writer.Write(previousStringOffset);
         foreach (var str in strings.Keys) {
-            Writer.Write(previousStringOffset += Encoding.UTF8.GetByteCount(str) + 1);
+            Writer.Write(previousStringOffset += _encoding.GetByteCount(str) + 1);
         }
 
         foreach (var str in strings.Keys) {

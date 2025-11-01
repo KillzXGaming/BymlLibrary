@@ -22,6 +22,8 @@ public readonly ref struct ImmutableByml
     public readonly ImmutableBymlStringTable StringTable;
     public readonly ImmutableBymlPathTable PathArray;
     public readonly bool SupportsPaths;
+    public readonly bool HasReferenceNodes;
+    public readonly bool UseShiftJIS;
 
     /// <summary>
     /// A span of the byml data
@@ -33,9 +35,10 @@ public readonly ref struct ImmutableByml
     /// </summary>
     private readonly BymlValue _value;
 
-    public ImmutableByml(ref RevrsReader reader)
+    public ImmutableByml(ref RevrsReader reader, bool useShiftJIS = false)
     {
         _data = reader.Data;
+        UseShiftJIS = useShiftJIS;
 
         reader.Endianness = Endianness.Little;
         Header = reader.Read<BymlHeader, BymlHeader.Reverser>();
@@ -59,12 +62,12 @@ public readonly ref struct ImmutableByml
         if (Header.Version == 1)
         {
             var pos = reader.Position;
-
             reader.Seek(12);
 
-            //
+            // This node must be a path array node or set to 0 (when no path is used in binary)
             var thirdNodeType = PeekNodeType(ref reader);
             reader.Seek(16);
+            // This node must be root (so array or map node)
             var fourthNodeType = PeekNodeType(ref reader);
 
             SupportsPaths = (thirdNodeType == BymlNodeType.Null || thirdNodeType == BymlNodeType.MK8PathArray)
@@ -76,12 +79,16 @@ public readonly ref struct ImmutableByml
                 int pathOffset = reader.Read<int>();
                 Header.RootNodeOffset = reader.Read<int>();
 
-                reader.Seek(pathOffset);
-                ref BymlContainer pathTableHeader
-                    = ref CheckContainerHeader(ref reader, BymlNodeType.MK8PathArray);
-                PathArray = new ImmutableBymlPathTable(_data, pathOffset, pathTableHeader.Count);
-                if (reader.Endianness.IsNotSystemEndianness()) {
-                    ImmutableBymlStringTable.Reverse(ref reader, pathOffset, pathTableHeader.Count);
+                if (pathOffset != 0)
+                {
+                    reader.Seek(pathOffset);
+                    ref BymlContainer pathTableHeader
+                        = ref CheckContainerHeader(ref reader, BymlNodeType.MK8PathArray);
+                    PathArray = new ImmutableBymlPathTable(_data, pathOffset, pathTableHeader.Count);
+                    if (reader.Endianness.IsNotSystemEndianness())
+                    {
+                        ImmutableBymlStringTable.Reverse(ref reader, pathOffset, pathTableHeader.Count);
+                    }
                 }
             }
 
@@ -109,7 +116,6 @@ public readonly ref struct ImmutableByml
                 ImmutableBymlStringTable.Reverse(ref reader, Header.KeyTableOffset, stringTableHeader.Count);
             }
         }
-
         if (reader.Endianness.IsNotSystemEndianness()) {
             // So much for 0 allocation :sadge:
             HashSet<int> reversedOffsets = [
@@ -120,10 +126,12 @@ public readonly ref struct ImmutableByml
 
             ReverseContainer(ref reader, Header.RootNodeOffset, reversedOffsets);
         }
-
-        ref BymlContainer rootNodeHeader
-            = ref _data[(_value = new(Header.RootNodeOffset)).Offset..].Read<BymlContainer>();
-        Type = rootNodeHeader.Type;
+        if (Header.RootNodeOffset != 0)
+        {
+            ref BymlContainer rootNodeHeader
+                = ref _data[(_value = new(Header.RootNodeOffset)).Offset..].Read<BymlContainer>();
+                Type = rootNodeHeader.Type;
+        }
         Endianness = reader.Endianness;
     }
 
@@ -163,8 +171,33 @@ public readonly ref struct ImmutableByml
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteYaml(IBufferWriter<byte> writer)
     {
+        if (this.Header.RootNodeOffset == 0)
+            return;
+
         Utf8YamlEmitter emitter = new(writer);
+
+        emitter.BeginMapping(MappingStyle.Block);
+
+        emitter.WriteString("Version");
+        emitter.WriteUInt32(this.Header.Version);
+
+        emitter.WriteString("IsBigEndian");
+        emitter.WriteBool(this.Endianness == Endianness.Big);
+
+        emitter.WriteString("SupportPaths");
+        emitter.WriteBool(this.SupportsPaths);
+
+        emitter.WriteString("HasReferenceNodes");
+        emitter.WriteBool(this.HasReferenceNodes);
+
+        emitter.EndMapping();
+
+        emitter.BeginMapping(MappingStyle.Block);
+        emitter.WriteString("root");
+
         BymlYamlWriter.Write(ref emitter, this, this);
+        emitter.EndMapping();
+
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
