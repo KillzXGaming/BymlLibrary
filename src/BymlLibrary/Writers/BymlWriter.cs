@@ -223,8 +223,12 @@ internal class BymlWriter
         }
 
         foreach (var point in paths.Values.SelectMany(x => x.Item2.Points)) {
-            Writer.Write(point.Position);
-            Writer.Write(point.Normal);
+            Writer.Write(point.Position.X);
+            Writer.Write(point.Position.Y);
+            Writer.Write(point.Position.Z);
+            Writer.Write(point.Normal.X);
+            Writer.Write(point.Normal.Y);
+            Writer.Write(point.Normal.Z);
             Writer.Write(point.Value);
         }
 

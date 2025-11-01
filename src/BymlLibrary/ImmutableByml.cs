@@ -88,7 +88,7 @@ public readonly ref struct ImmutableByml
                     reader.Seek(pathOffset);
                     ref BymlContainer pathTableHeader
                         = ref CheckContainerHeader(ref reader, BymlNodeType.MK8PathArray);
-                    PathArray = new ImmutableBymlPathTable(_data, pathOffset, pathTableHeader.Count);
+                    PathArray = new ImmutableBymlPathTable(_data, pathOffset, pathTableHeader.Count, reader.Endianness);
                     if (reader.Endianness.IsNotSystemEndianness())
                     {
                         ImmutableBymlStringTable.Reverse(ref reader, pathOffset, pathTableHeader.Count);

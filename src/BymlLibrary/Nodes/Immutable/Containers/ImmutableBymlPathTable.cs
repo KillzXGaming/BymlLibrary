@@ -15,8 +15,10 @@ using System.Threading.Tasks;
 
 namespace BymlLibrary.Nodes.Immutable.Containers
 {
-    public readonly ref struct ImmutableBymlPathTable(Span<byte> data, int offset, int count)
+    public readonly ref struct ImmutableBymlPathTable(Span<byte> data, int offset, int count, Endianness endianness)
     {
+        private readonly Endianness _endianness = endianness;
+
         /// <summary>
         /// Span of the BYMl data
         /// </summary>
@@ -46,12 +48,14 @@ namespace BymlLibrary.Nodes.Immutable.Containers
                 int start = _offset + _offsets[index];
                 int end = _offset + _offsets[++index];
                 int count = (end - start) / Point.SIZE;
-                return new ImmutableBymlPath(_data[start..end], count);
+                return new ImmutableBymlPath(_data[start..end], count, _endianness);
             }
         }
     }
-    public readonly ref struct ImmutableBymlPath(Span<byte> data, int count)
+    public readonly ref struct ImmutableBymlPath(Span<byte> data, int count, Endianness endianness)
     {
+        private readonly Endianness _endianness = endianness;
+
         /// <summary>
         /// Span of the BYMl data
         /// </summary>
@@ -76,7 +80,7 @@ namespace BymlLibrary.Nodes.Immutable.Containers
                 int start = index * Point.SIZE;
                 int end = start + Point.SIZE;
                 // bytes for the path data
-                return _data[start..end].Read<Point, Point.Reverser>(0);
+                return _data[start..end].Read<Point, Point.Reverser>(_endianness);
             }
         }
 
