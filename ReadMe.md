@@ -5,7 +5,7 @@
 
 Modern **B**inary **Yml** IO library written in managed C#
 
-Supports versions **2-7**.
+Supports versions **1-7**.
 
 > [!NOTE]
 > Some v7 nodes may not be supported, but everything used in TotK is.
